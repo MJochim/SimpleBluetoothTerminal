@@ -28,6 +28,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import java.io.File;
+import java.io.FileInputStream;
+
 public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener {
 
     private enum Connected { False, Pending, True }
@@ -133,6 +136,9 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
         sendText.addTextChangedListener(hexWatcher);
         sendText.setHint(hexEnabled ? "HEX mode" : "");
 
+        View sendFileBtn = view.findViewById(R.id.send_file_btn);
+        sendFileBtn.setOnClickListener(v -> sendFile());
+
         View sendBtn = view.findViewById(R.id.send_btn);
         sendBtn.setOnClickListener(v -> send(sendText.getText().toString()));
         return view;
@@ -193,6 +199,37 @@ public class TerminalFragment extends Fragment implements ServiceConnection, Ser
     private void disconnect() {
         connected = Connected.False;
         service.disconnect();
+    }
+
+    private void sendFile() {
+        if(connected != Connected.True) {
+            Toast.makeText(getActivity(), "not connected but hey", Toast.LENGTH_SHORT).show();
+            //return;
+        }
+        try {
+            File file = new File("/storage/emulated/0/Documents/bin.bin");
+
+            FileInputStream fileStream = new FileInputStream(file);
+            int fileSize = (int)fileStream.available();
+            byte fileContent[] = new byte[fileSize];
+            fileStream.read(fileContent);
+            fileStream.close();
+
+            int blockSize = 5; //1024*2;
+            for (int i=0; i<fileSize; i += blockSize) {
+                if (i + blockSize <= fileSize) {
+                    //service.write(java.util.Arrays.copyOfRange(fileContent, i, i + blockSize));
+                    Toast.makeText(getActivity(), "ganzer block, beginnt mit " + (char)fileContent[i], Toast.LENGTH_SHORT).show();
+                } else {
+                    //service.write(java.util.Arrays.copyOfRange(fileContent, i, fileSize));
+                    Toast.makeText(getActivity(), "teilblock, beginnt mit " +(char) fileContent[fileSize-1], Toast.LENGTH_SHORT).show();
+                }
+
+                java.util.concurrent.TimeUnit.MILLISECONDS.sleep(5);
+            }
+        } catch (Exception e) {
+            onSerialIoError(e);
+        }
     }
 
     private void send(String str) {
